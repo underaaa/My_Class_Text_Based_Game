@@ -209,7 +209,8 @@ def death_screan():
                 return "exit"  # Return "exit" to handle quitting properly
             if event.type == pg.KEYDOWN:
                 if event.key == pg.K_RETURN:
-                    done = True
+                    pg.quit()
+                    exit()
                 elif event.key == pg.K_r:  # Add replay option
                     return "replay"
 
@@ -622,7 +623,7 @@ def hallway_door():
                 done = True
                 return "inspect_altar"
             elif user_input == '2':
-                text_objects("You have chosen to leave the room and go back", (size[0] // 2, 400), True, font_size=24)
+                text_objects("You have chosen to leave the room and go home", (size[0] // 2, 400), True, font_size=24)
                 pg.display.flip()
                 pg.time.wait(2000)
                 done = True
@@ -646,7 +647,8 @@ def inspect_blood_alter(user_name):
             input_box.handle_event(event)
             if event.type == pg.KEYDOWN and event.key == pg.K_RETURN:
                 done = True  # Exit the loop when Enter is pressed
-                return "User completed the game"
+                pg.quit()
+                exit()
             
         try:
             background_image = pg.image.load("Blood_Altar_inside.png")
@@ -954,30 +956,31 @@ def user_leaved_key():
 def user_opened_door():
     input_box.text = ''  # Clear input box
     global death_text
-    # the door closes on the user and dies
     done = False
     while not done:
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 pg.quit()
                 exit()
-            input_box.handle_event(event)
-           
+            elif event.type == pg.KEYDOWN and event.key == pg.K_RETURN:
+                # Handle user pressing Enter
+                screen.fill(BLACK)
+                death_text = "The door closes and the room fills with poisonous gas"
+                text_objects(death_text, (360, 100), True)
+                text_objects("You have died", (360, 150), True)
+                pg.display.flip()
+                pg.time.wait(4000)
+                done = True  # Exit the loop
+                return "death"  # Explicitly return a state indicating death
+
+        # Update the screen
         screen.fill(BLACK)
         text_objects("You have opened the door", (360, 50), True)
-        text_objects("Walk in by pressing enter", (360, 100), True)
+        text_objects("Walk in by pressing Enter", (360, 100), True)
+        input_box.update()
+        input_box.draw(screen)
         pg.display.flip()
-        user_input = input_box.is_enter_pressed()  # Get the user input
-        if user_input:  # Check if Enter was pressed
-            user_input = user_input.strip()  # Strip whitespace
-            screen.fill(BLACK)
-            death_text = "The door closes and the room fills with poisonous gas"
-            text_objects(death_text, (360, 100), True)
-            text_objects("You have died", (360, 150), True)
-            pg.display.flip()
-            pg.time.wait(4000)
-            done = True  # Exit the loop when Enter is pressed
-            return
+        clock.tick(60)  # Limit the frame rate
 # this is my recusion but yea elif was the best i could think of at the time 
 def recursive_game_state(state, user_name=None):
     global death_text
@@ -1009,6 +1012,8 @@ def recursive_game_state(state, user_name=None):
                 result = death_screan()
                 if result == "replay":
                     state = "left_or_right"  # Ensure replay transitions to left_or_right
+                elif result == "exit":  # Close the game if exit is selected
+                    return "exit"  # Explicitly return exit
                 return
 
         elif state == "user_stairs":
@@ -1029,6 +1034,9 @@ def recursive_game_state(state, user_name=None):
                 return
             elif treasure_choice == "leave_employer":
                 state = "leave_employer"
+            elif treasure_choice == "exit":  # Close the game if exit is selected
+                pg.quit()
+                exit()
 
         elif state == "leave_employer":
             result = Leave_everything_and_tell_your_employer(user_name)
@@ -1042,6 +1050,8 @@ def recursive_game_state(state, user_name=None):
                 result = death_screan()
                 if result == "replay":
                     state = "left_or_right"  # Ensure replay transitions to left_or_right
+                elif result == "exit":  # Close the game if exit is selected
+                    return "exit"  # Explicitly return exit
                 return
 
         elif state == "user_right_1":
@@ -1053,6 +1063,8 @@ def recursive_game_state(state, user_name=None):
                 result = death_screan()
                 if result == "replay":
                     state = "left_or_right"  # Ensure replay transitions to left_or_right
+                elif result == "exit":  # Close the game if exit is selected
+                    return "exit"  # Explicitly return exit
                 return
 
         elif state == "user_right_door":
@@ -1068,7 +1080,7 @@ def recursive_game_state(state, user_name=None):
                 inspect_blood_alter(user_name)
                 return
             elif hallway_choice == "leave_room":
-                return
+                state = "user_right_door"
 
         elif state == "left_halway":
             zombie_choice = left_halway()
@@ -1080,12 +1092,16 @@ def recursive_game_state(state, user_name=None):
                     result = death_screan()
                     if result == "replay":
                         state = "left_or_right"  # Ensure replay transitions to left_or_right
+                    elif result == "exit":  # Close the game if exit is selected
+                        return "exit"  # Explicitly return exit
                     return
             elif zombie_choice == 'You have chosen to run from the zombie':
                 death_text = "You were caught by the zombie while running"
                 result = death_screan()
                 if result == "replay":
                     state = "left_or_right"  # Ensure replay transitions to left_or_right
+                elif result == "exit":  # Close the game if exit is selected
+                    return "exit"  # Explicitly return exit
                 return
 
         elif state == "user_won_fight":
@@ -1096,6 +1112,8 @@ def recursive_game_state(state, user_name=None):
                     result = death_screan()
                     if result == "replay":
                         state = "left_or_right"  # Ensure replay transitions to left_or_right
+                    elif result == "exit":  # Close the game if exit is selected
+                        return "exit"  # Explicitly return exit
                     return
             elif post_fight_choice == "hallway_door":
                 state = "hallway_door"
@@ -1109,14 +1127,12 @@ def main():  # this calls recursive game state
         while True:  # Add a loop to allow replaying
             result = recursive_game_state("main_menu")  # Start from main_menu initially
             if result == "replay":  # Restart the game if replay is selected
-                recursive_game_state("left_or_right")  # Restart from left_or_right
+                continue  # Restart the loop
             elif result == "exit":  # Exit the game if "exit" is returned
-                break
-    except Exception as e:
-        print(f"An error occurred: {e}")  # found out you can use this for an error
-
+                break  # Exit the loop
     finally:
         pg.quit()
+        exit()  # Ensure the program exits completely
 
 if __name__ == "__main__":
     main()
